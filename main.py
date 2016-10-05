@@ -2,12 +2,7 @@
 
 from socket import *
 from re import match
-from random import randint
-
-
-def random():
-    randint(1, 9)
-
+from random import random
 
 DNS_ERROR = 'DNS_ERROR'
 DNS_NAME = 'DNS_NAME'
@@ -188,7 +183,7 @@ def parse_query(record, idx):
 def parse_resource(record, idx):
     domain = parse_domain(record, idx)
     size = size_domain(record, idx)
-    idx = idx + size
+    idx += size
     dns_type = dns_type_string(get_value(record[idx:idx + 2]))
     dns_class = get_value(record[idx + 2:idx + 4])
     if dns_class != 1:
@@ -531,7 +526,7 @@ def transfer_zone(domain, DNS='sunic.sunet.se'):
 if __name__ == '__main__':
     for name in ['pson.pp.se', 'udac.se', 'telia.com']:
         print('--- %s ---' % name)
-        zone = transfer_zone(name, 'ns1.udac.se')
+        zone = transfer_zone(name, '168.126.63.1')
         for (header, queries, resources) in zone:
             print_header(header)
             for x in queries:

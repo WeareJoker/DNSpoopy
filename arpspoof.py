@@ -204,7 +204,7 @@ class ARP:
             packed_sender_ip = self._packing_ip(self.ip)
 
         else:
-            print("Send ARP Reply packet")
+            # print("Send ARP Reply packet")
             packed_sender_ip = self._packing_ip(self.gateway_ip)
 
             # My Spoofing Trick~

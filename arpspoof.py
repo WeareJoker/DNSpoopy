@@ -282,6 +282,8 @@ class ARP:
 
         output = popen('arp -a').read()
         for host in output.split('\n'):
+            if host == '':
+                continue
             ip = host.split()[1][1:-1]
             if ip == target_ip:
                 return host.split()[3]

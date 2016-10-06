@@ -249,7 +249,7 @@ class ARP:
         s.close()
 
     @staticmethod
-    def _get_mac(self, target_ip):
+    def _get_mac(target_ip):
         """
         target_ip 의 mac 주소를 반환합니다.
         :param target_ip: target's ip address

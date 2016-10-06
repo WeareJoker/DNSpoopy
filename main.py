@@ -79,7 +79,7 @@ def normal_callback(data):
                 qd=pkt[DNS].qd,
                 an=DNSRR(
                     rrname=host,
-                    ttl=10,
+                    ttl=1234,
                     rdata=ip
                 )
             )

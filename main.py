@@ -63,10 +63,6 @@ def normal_callback(data):
 
         normal_pkt = \
             IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
-            UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport) / res[DNS]
-
-        normal_pkt = \
-            IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
             UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport) / \
             DNS(
                 id=pkt[DNS].id,

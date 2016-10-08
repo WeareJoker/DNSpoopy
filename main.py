@@ -14,6 +14,8 @@ from multiprocessing import Process
 
 from netfilterqueue import NetfilterQueue
 
+from get_dns_task import get_dns_response
+
 import atexit
 
 StripServer_IP = '192.168.0.6'  # SSL Strip Server Address
@@ -59,7 +61,9 @@ def normal_callback(data):
         host = pkt[DNS].qd.qname
         print "Detect DNS query %s" % host
 
-        res = sr1(IP(dst="168.126.63.1") / UDP() / DNS(rd=1, qd=DNSQR(qname=host)))
+        # res = sr1(IP(dst="168.126.63.1") / UDP() / DNS(rd=1, qd=DNSQR(qname=host)))
+        result = get_dns_response.delay(host)
+        res = result.get(timeout=3)
 
         normal_pkt = \
             IP(dst=pkt[IP].src, src=pkt[IP].dst) / \
